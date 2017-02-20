@@ -1,0 +1,4 @@
+rootProject.name = 'nibiruLicense'
+
+include ':org.nibiru.license.core'
+include ':org.nibiru.license.android'

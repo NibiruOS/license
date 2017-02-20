@@ -1,0 +1,49 @@
+package org.nibiru.license.core.impl;
+
+import org.nibiru.license.core.api.Function;
+import org.nibiru.license.core.api.LicenceException;
+import org.nibiru.license.core.api.License;
+import org.nibiru.license.core.api.LicenseAuthorizer;
+import org.nibiru.license.core.api.PrivateKeyProvider;
+import org.nibiru.license.core.api.SignatureProvider;
+
+import static java.util.Objects.requireNonNull;
+
+import java.io.Serializable;
+import java.security.InvalidKeyException;
+import java.security.Signature;
+import java.security.SignatureException;
+
+/**
+ * {@link LicenseAuthorizer} based on digital signatures and {@link Function}.
+ * 
+ * @param <I>
+ *            The license info type
+ */
+public class SignatureLicenseAuthorizer<I extends Serializable> implements
+		LicenseAuthorizer<I> {
+	private final SignatureProvider signatureProvider;
+	private final PrivateKeyProvider privateKeyProvider;
+	private final Function<I, byte[]> converter;
+
+	public SignatureLicenseAuthorizer(SignatureProvider signatureProvider,
+			PrivateKeyProvider privateKeyProvider, Function<I, byte[]> converter) {
+		this.signatureProvider = requireNonNull(signatureProvider);
+		this.privateKeyProvider = requireNonNull(privateKeyProvider);
+		this.converter = requireNonNull(converter);
+	}
+
+	@Override
+	public License<I> authorize(I licenseInfo) {
+		try {
+			requireNonNull(licenseInfo);
+			Signature signature = this.signatureProvider.getSignature();
+			signature.initSign(this.privateKeyProvider.getPrivateKey());
+			signature.update(this.converter.apply(licenseInfo));
+			return new SimpleLicense<I>(licenseInfo, signature.sign());
+		} catch (SignatureException | InvalidKeyException e) {
+			throw new LicenceException(e);
+		}
+	}
+
+}
